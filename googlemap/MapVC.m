@@ -7,6 +7,7 @@
 //
 
 #import "MapVC.h"
+#import "GlobalConstants.h"
 
 @interface MapVC ()
 {
@@ -246,11 +247,14 @@
             pinLbl.textColor=[UIColor redColor];
             pinLbl.backgroundColor=[UIColor whiteColor];
             
-            moreDetail=[UIButton buttonWithType:UIButtonTypeCustom];
-            [moreDetail setBackgroundColor:[UIColor blackColor]];
-            [moreDetail setTitle:@"MORE DETAIL" forState:UIControlStateNormal];
-            [moreDetail setFrame:CGRectMake(5,60,(detailVw.frame.size.width)-10, 35)];
-            [moreDetail addTarget:self action:@selector(moreDetail) forControlEvents:UIControlEventTouchUpInside];
+            nearByMe=[UIButton buttonWithType:UIButtonTypeCustom];
+            [nearByMe setBackgroundColor:[UIColor blackColor]];
+            [nearByMe setTitle:@"Near By Me" forState:UIControlStateNormal];
+            [nearByMe setFrame:CGRectMake(5,60,(detailVw.frame.size.width)-10, 35)];
+         [nearByMe addTarget:self action:@selector(nearByMe) forControlEvents:UIControlEventTouchUpInside];
+         selectedLat=marker.position.latitude;
+         selectedLongtitude=marker.position.longitude;
+         NSLog(@"lat %f long %f",selectedLat,selectedLongtitude);
             
             pathBtn=[UIButton buttonWithType:UIButtonTypeSystem];
             [pathBtn setTitle:@"Show path" forState:UIControlStateNormal];
@@ -269,7 +273,7 @@
          
          
             [detailVw addSubview:pinLbl];
-            [detailVw addSubview:moreDetail];
+            [detailVw addSubview:nearByMe];
             [detailVw addSubview:pathBtn];
             [detailVw addSubview:navigationBtn];
 
@@ -329,12 +333,158 @@ didLongPressAtCoordinate:(CLLocationCoordinate2D)coordinate
     NSLog(@"long press");
 }
 
--(void)moreDetail
+-(void)nearByMe
 {
     NSLog(@"BUTTON TAPPED");
+    
+    if(selectedMarker!=nil)
+    {
+        UIAlertController *locatlityOption=[UIAlertController alertControllerWithTitle:@"Select Places" message:@"" preferredStyle:UIAlertControllerStyleActionSheet];
+        UIAlertAction *foodinfo=[UIAlertAction actionWithTitle:@"Food" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            nearPlacesToSearch=@"food";
+            [self fetchNearestPlaces];
+
+        }];
+        UIAlertAction *petrolinfo=[UIAlertAction actionWithTitle:@"Petrol Station" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            nearPlacesToSearch=@"gas_station";
+            [self fetchNearestPlaces];
+
+        }];
+        UIAlertAction *atminfo=[UIAlertAction actionWithTitle:@"ATM" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            nearPlacesToSearch=@"atm";
+            [self fetchNearestPlaces];
+            
+        }];
+        UIAlertAction *cancelInfo=[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+            
+        }];
+        
+        [locatlityOption addAction:foodinfo];
+        [locatlityOption addAction:petrolinfo];
+        [locatlityOption addAction:atminfo];
+
+        [locatlityOption addAction:cancelInfo];
+        [self presentViewController:locatlityOption animated:YES completion:^{
+        }];
+    }
+    else
+    {
+        NSLog(@"No Marker Selected");
+    }
+//    https://maps.googleapis.com/maps/api/place/nearbysearch/json?key=AIzaSyDHoU3-mZYIh2_yXYoPi4PmGUDgXetdmow&location=23.0225,72.5714&radius=1000&keyword=cafe&type=food
 }
 
+-(void)fetchNearestPlaces
+{
+//https://maps.googleapis.com/maps/api/place/nearbysearch/json?key=AIzaSyDHoU3-mZYIh2_yXYoPi4PmGUDgXetdmow&location=23.0225,72.5714&radius=1000&keyword=cafe&type=food
+    
+    NSURLSessionConfiguration *config=[NSURLSessionConfiguration defaultSessionConfiguration];
+    NSURLSession *session=[NSURLSession sessionWithConfiguration:config];
+    NSURL *url=[NSURL URLWithString:[NSString stringWithFormat:@"https://maps.googleapis.com/maps/api/place/nearbysearch/json?key=%@&location=%f,%f&radius=%d&types=%@",PLACESAPIKEY_CONST,selectedLat,selectedLongtitude,RADIUS_CONST,nearPlacesToSearch]];
+    NSURLSessionTask *fetchTask=[session dataTaskWithURL:url completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error)
+    {
+        NSDictionary *tempDict=[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&error];
+        nearPlacesArray=[tempDict objectForKey:@"results"];
+        NSLog(@"places %@",[nearPlacesArray description]);
+        NSMutableSet *tempMarkerset=[[NSMutableSet alloc] init];
+        
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            
+            
+            for (id obj in nearPlacesArray)
+            {
+                CSMarker *marker=[[CSMarker alloc] init];
+                marker.title=[NSString stringWithFormat:@"%@",[obj objectForKey:@"name"]];
+                marker.objectID=[NSString stringWithFormat:@"%@",[obj objectForKey:@"id"]];
+                
+                NSURL *imageUrl=[NSURL URLWithString:[NSString stringWithFormat:@"%@",[obj objectForKey:@"icon"]]];
+                SDWebImageDownloader *downloader=[SDWebImageDownloader sharedDownloader];
+                [downloader downloadImageWithURL:imageUrl options:SDWebImageDownloaderContinueInBackground progress:^(NSInteger receivedSize, NSInteger expectedSize, NSURL * _Nullable targetURL) {
+                    NSLog(@"Total Bytes %ld Bytes Received %ld",expectedSize,receivedSize);
+                    
+                } completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, BOOL finished) {
+                    NSLog(@"Complete Download");
+                    image = [self image:image ByScalingAndCroppingForSize:CGSizeMake(MAPICONWIDTH_CONST,MAPICONHEIGHT_CONST)];
+                    [marker setIcon:image];
+                    [tempMarkerset addObject:marker];
 
+                }];
+                
+                
+
+                double lat=[[[[obj objectForKey:@"geometry"] objectForKey:@"location"] objectForKey:@"lat"] doubleValue];
+                double longti=[[[[obj objectForKey:@"geometry"] objectForKey:@"location"] objectForKey:@"lng"] doubleValue];
+                CLLocationCoordinate2D loc=CLLocationCoordinate2DMake(lat,longti);
+//                  NSLog(@"lat %ld",loc);
+                marker.position=loc;
+                [tempMarkerset addObject:marker];
+            }
+
+            self.markers=[tempMarkerset copy];
+            NSLog(@"Marker %@",[self.markers description]);
+            [self drawMarkers];
+
+        });
+        
+        
+    }];
+    
+    [fetchTask resume];
+}
+
+- (UIImage*)image:(UIImage *)image ByScalingAndCroppingForSize:(CGSize)targetSize
+{
+    UIImage *sourceImage = image;
+    UIImage *newImage = nil;
+    CGSize imageSize = sourceImage.size;
+    CGFloat width = imageSize.width;
+    CGFloat height = imageSize.height;
+    CGFloat targetWidth = targetSize.width;
+    CGFloat targetHeight = targetSize.height;
+    CGFloat scaleFactor = 0.0;
+    CGFloat scaledWidth = targetWidth;
+    CGFloat scaledHeight = targetHeight;
+    CGPoint thumbnailPoint = CGPointMake(0.0,0.0);
+    
+    if (CGSizeEqualToSize(imageSize, targetSize) == NO)
+    {
+        CGFloat widthFactor = targetWidth / width;
+        CGFloat heightFactor = targetHeight / height;
+        
+        if (widthFactor > heightFactor)
+            scaleFactor = widthFactor; // scale to fit height
+        else
+            scaleFactor = heightFactor; // scale to fit width
+        scaledWidth  = width * scaleFactor;
+        scaledHeight = height * scaleFactor;
+        
+        // center the image
+        if (widthFactor > heightFactor)
+        {
+            thumbnailPoint.y = (targetHeight - scaledHeight) * 0.5;
+        }
+        else
+            if (widthFactor < heightFactor)
+            {
+                thumbnailPoint.x = (targetWidth - scaledWidth) * 0.5;
+            }
+    }
+    
+    UIGraphicsBeginImageContext(targetSize); // this will crop
+    
+    CGRect thumbnailRect = CGRectZero;
+    thumbnailRect.origin = thumbnailPoint;
+    thumbnailRect.size.width  = scaledWidth;
+    thumbnailRect.size.height = scaledHeight;
+    
+    [sourceImage drawInRect:thumbnailRect];
+    
+    newImage = UIGraphicsGetImageFromCurrentImageContext();
+    if(newImage == nil) 
+        UIGraphicsEndImageContext();
+    return newImage;
+}
 /*
  
  #pragma mark - Marker Info window called

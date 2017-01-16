@@ -11,6 +11,9 @@
 #import "CSMarker.h"
 #import "DirectionVCViewController.h"
 
+#import "SDWebImageDownloader.h"
+#import "SDWebImage/UIImageView+WebCache.h"
+
 
 @interface MapVC : UIViewController <GMSMapViewDelegate,NSURLSessionDelegate,CLLocationManagerDelegate>
 {
@@ -21,14 +24,16 @@
     CLLocationManager *locationManager;
     DirectionVCViewController *objdirection;
 
-
+    
     NSSet *markers;
-    NSArray *stepsArray;
+    NSArray *stepsArray,*nearPlacesArray;
     NSDictionary *directionDict;
     UIView *detailVw;
-    UIButton *moreDetail,*pathBtn,*navigationBtn;
+    UIButton *nearByMe,*pathBtn,*navigationBtn;
 
     CGSize textSize;
+    float selectedLat,selectedLongtitude;
+    NSString *nearPlacesToSearch;
 }
 
 @property (nonatomic,retain)GMSMapView *map;
@@ -38,11 +43,12 @@
 
 
 -(void)readMarkersFromFile;
--(void)moreDetail;
+-(void)nearByMe;
 -(void)addpinfromjson:(NSDictionary *)jsonDict;
 -(void)directionTapped:(id)sender;
 -(void)callDirectionApi:(CSMarker *)selectedMarker;
 -(void)navigationInfo:(id)sender;
+-(void)fetchNearestPlaces;
 
 @end
 
