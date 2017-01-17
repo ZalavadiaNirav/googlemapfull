@@ -27,6 +27,7 @@
 		F1AF7D281E1D2657007E9A40 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1AF7D121E1D2417007E9A40 /* CoreGraphics.framework */; };
 		F1AF7D2C1E1D26CA007E9A40 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1AF7D2B1E1D26CA007E9A40 /* ImageIO.framework */; };
 		F1AF7D2E1E1D26ED007E9A40 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1AF7D2D1E1D26ED007E9A40 /* SystemConfiguration.framework */; };
+		F1DE2D061E2DE4B500E9EA41 /* GlobalConstants.m in Sources */ = {isa = PBXBuildFile; fileRef = F1DE2D051E2DE4B500E9EA41 /* GlobalConstants.m */; };
 		F1E6346F1E1E02F2007FDF72 /* GoogleMaps.bundle in Resources */ = {isa = PBXBuildFile; fileRef = F1E6346E1E1E02F2007FDF72 /* GoogleMaps.bundle */; };
 		F1E634711E1E0361007FDF72 /* GoogleMaps.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1E634701E1E0361007FDF72 /* GoogleMaps.framework */; };
 		F1E634731E1E2B59007FDF72 /* locationApi.json in Resources */ = {isa = PBXBuildFile; fileRef = F1E634721E1E2B59007FDF72 /* locationApi.json */; };
@@ -90,6 +91,7 @@
 		F1AF7D291E1D26BF007E9A40 /* CoreImage.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreImage.framework; path = System/Library/Frameworks/CoreImage.framework; sourceTree = SDKROOT; };
 		F1AF7D2B1E1D26CA007E9A40 /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = System/Library/Frameworks/ImageIO.framework; sourceTree = SDKROOT; };
 		F1AF7D2D1E1D26ED007E9A40 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
+		F1DE2D051E2DE4B500E9EA41 /* GlobalConstants.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GlobalConstants.m; sourceTree = "<group>"; };
 		F1E6346E1E1E02F2007FDF72 /* GoogleMaps.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; path = GoogleMaps.bundle; sourceTree = "<group>"; };
 		F1E634701E1E0361007FDF72 /* GoogleMaps.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GoogleMaps.framework; path = GoogleMaps.bundle/GoogleMaps.framework; sourceTree = "<group>"; };
 		F1E634721E1E2B59007FDF72 /* locationApi.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = locationApi.json; sourceTree = "<group>"; };
@@ -207,6 +209,7 @@
 				F1AF7CFC1E1D1A30007E9A40 /* MapVC.h */,
 				F1AF7CFD1E1D1A30007E9A40 /* MapVC.m */,
 				F1ED024F1E2CF3FD0067BE19 /* GlobalConstants.h */,
+				F1DE2D051E2DE4B500E9EA41 /* GlobalConstants.m */,
 				F1AB67DE1E20E99400A896C4 /* DirectionVCViewController.h */,
 				F1AB67DF1E20E99400A896C4 /* DirectionVCViewController.m */,
 				F1AF7CFF1E1D1A30007E9A40 /* Main.storyboard */,
@@ -407,6 +410,7 @@
 				F1ED334C1E2CD62C00589ADB /* FLAnimatedImageView.m in Sources */,
 				F1ED33481E2CD2ED00589ADB /* UIView+WebCache.m in Sources */,
 				F1ED33411E2CD2ED00589ADB /* SDWebImagePrefetcher.m in Sources */,
+				F1DE2D061E2DE4B500E9EA41 /* GlobalConstants.m in Sources */,
 				F1ED33441E2CD2ED00589ADB /* UIImage+MultiFormat.m in Sources */,
 				F1ED33491E2CD2ED00589ADB /* UIView+WebCacheOperation.m in Sources */,
 				F1ED33391E2CD2EC00589ADB /* NSImage+WebCache.m in Sources */,

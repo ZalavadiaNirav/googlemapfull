@@ -34,6 +34,7 @@
     CGSize textSize;
     float selectedLat,selectedLongtitude;
     NSString *nearPlacesToSearch;
+    NSMutableArray *nearPlacesLatLong,*distanceArray;
 }
 
 @property (nonatomic,retain)GMSMapView *map;
@@ -49,6 +50,7 @@
 -(void)callDirectionApi:(CSMarker *)selectedMarker;
 -(void)navigationInfo:(id)sender;
 -(void)fetchNearestPlaces;
+-(void)distanceNearPlaces;
 
 @end
 

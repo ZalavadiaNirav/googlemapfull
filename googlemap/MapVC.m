@@ -162,7 +162,7 @@
     if(self.map.myLocation !=nil)
     {
         NSURLSession *session=[NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration defaultSessionConfiguration]];
-        NSURL *url=[NSURL URLWithString:[NSString stringWithFormat:@"https://maps.googleapis.com/maps/api/directions/json?origin=%f,%f&destination=%f,%f&sensor=true&key=AIzaSyCDuC3eH6GW766vnvHZWHpJbTGyOKiszJU",self.map.myLocation.coordinate.latitude,self.map.myLocation.coordinate.longitude,marker.position.latitude,marker.position.longitude]];
+        NSURL *url=[NSURL URLWithString:[NSString stringWithFormat:@"%@directions/json?origin=%f,%f&destination=%f,%f&sensor=true&key=%@",API_PREFIX,self.map.myLocation.coordinate.latitude,self.map.myLocation.coordinate.longitude,marker.position.latitude,marker.position.longitude,GOOGLEAPIKEY_CONST]];
         NSURLSessionDataTask *datatask= [session dataTaskWithURL:url completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError *error)
         {
             NSError *err=nil;
@@ -380,20 +380,24 @@ didLongPressAtCoordinate:(CLLocationCoordinate2D)coordinate
     
     NSURLSessionConfiguration *config=[NSURLSessionConfiguration defaultSessionConfiguration];
     NSURLSession *session=[NSURLSession sessionWithConfiguration:config];
-    NSURL *url=[NSURL URLWithString:[NSString stringWithFormat:@"https://maps.googleapis.com/maps/api/place/nearbysearch/json?key=%@&location=%f,%f&radius=%d&types=%@",PLACESAPIKEY_CONST,selectedLat,selectedLongtitude,RADIUS_CONST,nearPlacesToSearch]];
+    NSURL *url=[NSURL URLWithString:[NSString stringWithFormat:@"%@place/nearbysearch/json?key=%@&location=%f,%f&radius=%d&types=%@",API_PREFIX,PLACESAPIKEY_CONST,selectedLat,selectedLongtitude,RADIUS_CONST,nearPlacesToSearch]];
     NSURLSessionTask *fetchTask=[session dataTaskWithURL:url completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error)
     {
         NSDictionary *tempDict=[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&error];
         nearPlacesArray=[tempDict objectForKey:@"results"];
+
         NSLog(@"places %@",[nearPlacesArray description]);
         NSMutableSet *tempMarkerset=[[NSMutableSet alloc] init];
+        nearPlacesLatLong=[[NSMutableArray alloc] init];
+
         
-        
-        dispatch_async(dispatch_get_main_queue(), ^{
-            
-            
+        dispatch_async(dispatch_get_main_queue(),
+        ^{
+
             for (id obj in nearPlacesArray)
             {
+                [nearPlacesLatLong addObject:[NSString stringWithFormat:@"%@,%@",[[[obj objectForKey:@"geometry"] objectForKey:@"location"] objectForKey:@"lat"],[[[obj objectForKey:@"geometry"] objectForKey:@"location"] objectForKey:@"lng"]]];
+                
                 CSMarker *marker=[[CSMarker alloc] init];
                 marker.title=[NSString stringWithFormat:@"%@",[obj objectForKey:@"name"]];
                 marker.objectID=[NSString stringWithFormat:@"%@",[obj objectForKey:@"id"]];
@@ -403,35 +407,55 @@ didLongPressAtCoordinate:(CLLocationCoordinate2D)coordinate
                 [downloader downloadImageWithURL:imageUrl options:SDWebImageDownloaderContinueInBackground progress:^(NSInteger receivedSize, NSInteger expectedSize, NSURL * _Nullable targetURL) {
                     NSLog(@"Total Bytes %ld Bytes Received %ld",expectedSize,receivedSize);
                     
-                } completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, BOOL finished) {
-                    NSLog(@"Complete Download");
-                    image = [self image:image ByScalingAndCroppingForSize:CGSizeMake(MAPICONWIDTH_CONST,MAPICONHEIGHT_CONST)];
-                    [marker setIcon:image];
-                    [tempMarkerset addObject:marker];
-
-                }];
-                
-                
-
+                }
+                    completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, BOOL finished) {
+                        NSLog(@"Complete Download");
+                        image = [self image:image ByScalingAndCroppingForSize:CGSizeMake(MAPICONWIDTH_CONST,MAPICONHEIGHT_CONST)];
+                        [marker setIcon:image];
+                        [tempMarkerset addObject:marker];
+                    }];
                 double lat=[[[[obj objectForKey:@"geometry"] objectForKey:@"location"] objectForKey:@"lat"] doubleValue];
                 double longti=[[[[obj objectForKey:@"geometry"] objectForKey:@"location"] objectForKey:@"lng"] doubleValue];
                 CLLocationCoordinate2D loc=CLLocationCoordinate2DMake(lat,longti);
-//                  NSLog(@"lat %ld",loc);
                 marker.position=loc;
                 [tempMarkerset addObject:marker];
             }
 
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),^(void){
+                [self distanceNearPlaces];
+        });
+            
+            NSLog(@"Address array %@",[nearPlacesLatLong description]);
             self.markers=[tempMarkerset copy];
             NSLog(@"Marker %@",[self.markers description]);
             [self drawMarkers];
-
         });
-        
+    }];
+    [fetchTask resume];
+    
+}
+-(void)distanceNearPlaces
+{
+
+    NSString *origin=[nearPlacesLatLong componentsJoinedByString:@"|"];
+    origin = [origin stringByAddingPercentEncodingWithAllowedCharacters: [NSCharacterSet URLQueryAllowedCharacterSet]];
+    NSLog(@"Origin address %@",origin);
+    NSURLSessionConfiguration *config=[NSURLSessionConfiguration defaultSessionConfiguration];
+    NSURLSession *session=[NSURLSession sessionWithConfiguration:config];
+    NSURL *url=[NSURL URLWithString:[NSString stringWithFormat:@"%@distancematrix/json?origins=%@&destinations=%f,%f&key=%@",API_PREFIX,origin,selectedLat,selectedLongtitude,PLACESAPIKEY_CONST]];
+    NSURLSessionTask *distanceFetchTask=[session dataTaskWithURL:url completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error)
+    {
+        NSError *err;
+        distanceArray=[[NSMutableArray alloc] init];
+        distanceArray=[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&err];
         
     }];
-    
-    [fetchTask resume];
+
+    [distanceFetchTask resume];
+
+
 }
+
 
 - (UIImage*)image:(UIImage *)image ByScalingAndCroppingForSize:(CGSize)targetSize
 {

@@ -9,11 +9,15 @@
 #ifndef GlobalConstants_h
 #define GlobalConstants_h
 
-const int RADIUS_CONST=1000;
-const int MAPICONHEIGHT_CONST=25;
-const int MAPICONWIDTH_CONST=25;
+#import <Foundation/Foundation.h>
 
-const NSString *PLACESAPIKEY_CONST=@"AIzaSyDHoU3-mZYIh2_yXYoPi4PmGUDgXetdmow";
+extern int RADIUS_CONST;
+extern int MAPICONHEIGHT_CONST;
+extern int MAPICONWIDTH_CONST;
+
+extern NSString *PLACESAPIKEY_CONST;
+extern NSString *GOOGLEAPIKEY_CONST;
+extern NSString *API_PREFIX;
 
 #endif /* GlobalConstants_h */
 
