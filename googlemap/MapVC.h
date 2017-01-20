@@ -1,10 +1,7 @@
-//
+
 //  ViewController.h
 //  googlemap
-//
-//  Created by C N Soft Net on 04/01/17.
-//  Copyright © 2017 C N Soft Net. All rights reserved.
-//
+
 
 #import <UIKit/UIKit.h>
 #import <GoogleMaps/GoogleMaps.h>
@@ -12,6 +9,7 @@
 #import "DirectionVCViewController.h"
 
 #import "SDWebImageDownloader.h"
+#import "SDImageCache.h"
 #import "SDWebImage/UIImageView+WebCache.h"
 
 
@@ -24,7 +22,7 @@
     CLLocationManager *locationManager;
     DirectionVCViewController *objdirection;
 
-    
+    NSMutableSet *nearPlacesMarkers;
     NSSet *markers;
     NSArray *stepsArray,*nearPlacesArray;
     NSDictionary *directionDict;
@@ -33,8 +31,9 @@
 
     CGSize textSize;
     float selectedLat,selectedLongtitude;
-    NSString *nearPlacesToSearch;
+    NSString *nearPlacesToSearch,*originCordinatesStr;
     NSMutableArray *nearPlacesLatLong,*distanceArray;
+    NSMutableArray *imageUrl;
 }
 
 @property (nonatomic,retain)GMSMapView *map;
@@ -47,10 +46,12 @@
 -(void)nearByMe;
 -(void)addpinfromjson:(NSDictionary *)jsonDict;
 -(void)directionTapped:(id)sender;
--(void)callDirectionApi:(CSMarker *)selectedMarker;
+-(void)callDirectionApi;
+//:(CSMarker *)selectedMarker;
 -(void)navigationInfo:(id)sender;
 -(void)fetchNearestPlaces;
 -(void)distanceNearPlaces;
+
 
 @end
 

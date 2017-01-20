@@ -1,10 +1,6 @@
-//
+
 //  ViewController.m
 //  googlemap
-//
-//  Created by C N Soft Net on 04/01/17.
-//  Copyright © 2017 C N Soft Net. All rights reserved.
-//
 
 #import "MapVC.h"
 #import "GlobalConstants.h"
@@ -144,25 +140,64 @@
 
 #pragma mark - plot markers on the map
 
+
 -(void)drawMarkers
 {
+    
+    NSLog(@"All Markers %@",[self.markers description]);
+    int i=0;
     for (CSMarker *marker in self.markers)
     {
+
         if(marker.map==nil)
             marker.map=self.map;
+
+    }
+    if(nearPlacesMarkers!=nil)
+    {
+        for (CSMarker *marker in nearPlacesMarkers)
+        {
+            if(distanceArray!=nil)
+            {
+                 marker.snippet=[NSString stringWithFormat:@"%@",[[[[[distanceArray objectAtIndex:i] objectForKey:@"elements"] objectAtIndex:0] objectForKey:@"distance"] objectForKey:@"text"]];
+                NSLog(@"distance %@",[NSString stringWithFormat:@"%@",[[[[[distanceArray objectAtIndex:i] objectForKey:@"elements"] objectAtIndex:0] objectForKey:@"distance"] objectForKey:@"text"]]);
+                i++;
+                 marker.map=self.map;
+            }
+        }
     }
 }
 
 
-#pragma mark - Direction api to know direction
+#pragma mark - Draw Direction between current location or between selected marker to nearest places
 
--(void)callDirectionApi:(CSMarker *)marker
+-(void)directionTapped:(id)sender
+{
+    [self callDirectionApi];
+    
+}
+
+-(void)callDirectionApi
+//:(CSMarker *)marker
 {
     NSLog(@"latitude %f longtitude %f",self.map.myLocation.coordinate.latitude,self.map.myLocation.coordinate.longitude);
     if(self.map.myLocation !=nil)
     {
         NSURLSession *session=[NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration defaultSessionConfiguration]];
-        NSURL *url=[NSURL URLWithString:[NSString stringWithFormat:@"%@directions/json?origin=%f,%f&destination=%f,%f&sensor=true&key=%@",API_PREFIX,self.map.myLocation.coordinate.latitude,self.map.myLocation.coordinate.longitude,marker.position.latitude,marker.position.longitude,GOOGLEAPIKEY_CONST]];
+        NSURL *url;
+         CSMarker *marker=[[CSMarker alloc] init];
+        
+        if(originCordinatesStr==nil && selectedMarker!=nil)
+        {
+           
+             marker=selectedMarker;
+             url=[NSURL URLWithString:[NSString stringWithFormat:@"%@directions/json?origin=%f,%f&destination=%f,%f&sensor=true&key=%@",API_PREFIX,self.map.myLocation.coordinate.latitude,self.map.myLocation.coordinate.longitude,marker.position.latitude,marker.position.longitude,GOOGLEAPIKEY_CONST]];
+        }
+        else
+        {
+            url=[NSURL URLWithString:[NSString stringWithFormat:@"%@directions/json?origin=%@&destination=%f,%f&sensor=true&key=%@",API_PREFIX,originCordinatesStr,selectedLat,selectedLongtitude,GOOGLEAPIKEY_CONST]];
+        }
+    
         NSURLSessionDataTask *datatask= [session dataTaskWithURL:url completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError *error)
         {
             NSError *err=nil;
@@ -175,6 +210,14 @@
                 if(self.stepsArray!=nil)
                 {
                     NSLog(@"Direction Api data loaded sucessfully");
+                    if(directionDict!=nil)
+                    {
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            self.polyline.map=nil;
+                            [self drawpath];
+                            
+                        });
+                    }
                 }
                 else
                 {
@@ -206,21 +249,7 @@
         NSLog(@"%@",[err description]);
     }
 }
-
-#pragma mark - Call directionApi for get details of navigation and points to draw path on map
-
--(void)directionTapped:(id)sender
-{
-    if(directionDict!=nil)
-    {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            self.polyline.map=nil;
-            [self drawpath];
-            
-        });
-    }
-    
-}
+#pragma mark - Custom Information windows
 
 -(void)mapView:(GMSMapView *)mapView didTapInfoWindowOfMarker:(CSMarker *)marker
 {
@@ -230,7 +259,6 @@
     
     [[NSOperationQueue mainQueue] addOperationWithBlock:
      ^{
-            [self callDirectionApi:selectedMarker];
          
             //create Information Window
             if([[self.map subviews] containsObject:detailVw])
@@ -251,10 +279,11 @@
             [nearByMe setBackgroundColor:[UIColor blackColor]];
             [nearByMe setTitle:@"Near By Me" forState:UIControlStateNormal];
             [nearByMe setFrame:CGRectMake(5,60,(detailVw.frame.size.width)-10, 35)];
-         [nearByMe addTarget:self action:@selector(nearByMe) forControlEvents:UIControlEventTouchUpInside];
-         selectedLat=marker.position.latitude;
-         selectedLongtitude=marker.position.longitude;
-         NSLog(@"lat %f long %f",selectedLat,selectedLongtitude);
+            [nearByMe addTarget:self action:@selector(nearByMe) forControlEvents:UIControlEventTouchUpInside];
+         
+             selectedLat=marker.position.latitude;
+             selectedLongtitude=marker.position.longitude;
+             NSLog(@"lat %f long %f",selectedLat,selectedLongtitude);
             
             pathBtn=[UIButton buttonWithType:UIButtonTypeSystem];
             [pathBtn setTitle:@"Show path" forState:UIControlStateNormal];
@@ -287,7 +316,7 @@
     }];
 }
 
-#pragma mark - Navigation inforamtion
+#pragma mark - Navigation Inforamtion
 
 -(void)navigationInfo:(id)sender
 {
@@ -333,6 +362,8 @@ didLongPressAtCoordinate:(CLLocationCoordinate2D)coordinate
     NSLog(@"long press");
 }
 
+#pragma mark - Near by button Action
+
 -(void)nearByMe
 {
     NSLog(@"BUTTON TAPPED");
@@ -371,7 +402,6 @@ didLongPressAtCoordinate:(CLLocationCoordinate2D)coordinate
     {
         NSLog(@"No Marker Selected");
     }
-//    https://maps.googleapis.com/maps/api/place/nearbysearch/json?key=AIzaSyDHoU3-mZYIh2_yXYoPi4PmGUDgXetdmow&location=23.0225,72.5714&radius=1000&keyword=cafe&type=food
 }
 
 -(void)fetchNearestPlaces
@@ -385,17 +415,141 @@ didLongPressAtCoordinate:(CLLocationCoordinate2D)coordinate
     {
         NSDictionary *tempDict=[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&error];
         nearPlacesArray=[tempDict objectForKey:@"results"];
-
         NSLog(@"places %@",[nearPlacesArray description]);
-        NSMutableSet *tempMarkerset=[[NSMutableSet alloc] init];
+        nearPlacesMarkers=[[NSMutableSet alloc] init];
         nearPlacesLatLong=[[NSMutableArray alloc] init];
+        imageUrl=[[NSMutableArray alloc] init];
+        
+//        for (int i=0; i<[nearPlacesArray count]; i++)
+//        {
+//            
+//            id obj=[nearPlacesArray objectAtIndex:i];
+//            [nearPlacesLatLong addObject:[NSString stringWithFormat:@"%@,%@",[[[obj objectForKey:@"geometry"] objectForKey:@"location"] objectForKey:@"lat"],[[[obj objectForKey:@"geometry"] objectForKey:@"location"] objectForKey:@"lng"]]];
+//            [imageUrl addObject:[NSURL URLWithString:[NSString stringWithFormat:@"%@",[obj objectForKey:@"icon"]]]];
+//
+//        }
+//        int q1task=(int)(nearPlacesArray.count/4);
+//        int q2task=(int)(nearPlacesArray.count/4);
+//        int q3task=(int)(nearPlacesArray.count/4);
+//        int q4task=(int)((nearPlacesArray.count/4)+(int)((nearPlacesArray.count)%4));
+//        
+//        
+//        NSOperationQueue *q1=[[NSOperationQueue alloc] init];
+//        NSOperationQueue *q2=[[NSOperationQueue alloc] init];
+//        NSOperationQueue *q3=[[NSOperationQueue alloc] init];
+//        NSOperationQueue *q4=[[NSOperationQueue alloc] init];
+//        
+//        [q1 addOperationWithBlock:^{
+//            for (int i=0; i<q1task; i++)
+//            {
+//                NSURL *url=[imageUrl objectAtIndex:i];
+//                SDWebImageDownloader *downloader=[SDWebImageDownloader sharedDownloader];
+//
+//                [downloader downloadImageWithURL:url options:SDWebImageDownloaderContinueInBackground progress:
+//                 ^(NSInteger receivedSize, NSInteger expectedSize, NSURL * _Nullable targetURL) {
+//
+//                     //measure download progress of icon
+//                    NSLog(@"Total Bytes %ld Bytes Received %ld",expectedSize,receivedSize);
+//
+//                }
+//                completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, BOOL finished) {
+//                    NSLog(@"Complete Download q1");
+//                    image = [self image:image ByScalingAndCroppingForSize:CGSizeMake(MAPICONWIDTH_CONST,MAPICONHEIGHT_CONST)];
+//                    [[SDImageCache sharedImageCache] storeImage:image forKey:@"image" toDisk:YES completion:nil];
+////                    [[SDImageCache sharedImageCache] storeImage:image forKey:myCacheKey];
+//                }];
+//                
+//            }
+//        }];
+//        
+//        [q2 addOperationWithBlock:^{
+//            for (int i=q1task; i<=q2task; i++)
+//            {
+//                NSURL *url=[imageUrl objectAtIndex:i];
+//                SDWebImageDownloader *downloader=[SDWebImageDownloader sharedDownloader];
+//                
+//                [downloader downloadImageWithURL:url options:SDWebImageDownloaderContinueInBackground progress:
+//                 ^(NSInteger receivedSize, NSInteger expectedSize, NSURL * _Nullable targetURL) {
+//                     
+//                     //measure download progress of icon
+//                     NSLog(@"Total Bytes %ld Bytes Received %ld",expectedSize,receivedSize);
+//                     
+//                 }
+//                                       completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, BOOL finished) {
+//                                           NSLog(@"Complete Download q2");
+//                                           image = [self image:image ByScalingAndCroppingForSize:CGSizeMake(MAPICONWIDTH_CONST,MAPICONHEIGHT_CONST)];
+//                                           [[SDImageCache sharedImageCache] storeImage:image forKey:@"image" toDisk:YES completion:nil];
+//
+//                }];
+//            }
+//            
+//        }];
+//        
+//        [q3 addOperationWithBlock:^{
+//            for (int i=q2task; i<=q3task; i++)
+//            {
+//                NSURL *url=[imageUrl objectAtIndex:i];
+//                SDWebImageDownloader *downloader=[SDWebImageDownloader sharedDownloader];
+//                
+//                [downloader downloadImageWithURL:url options:SDWebImageDownloaderContinueInBackground progress:
+//                 ^(NSInteger receivedSize, NSInteger expectedSize, NSURL * _Nullable targetURL) {
+//                     
+//                     //measure download progress of icon
+//                     NSLog(@"Total Bytes %ld Bytes Received %ld",expectedSize,receivedSize);
+//                     
+//                 }
+//                                       completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, BOOL finished) {
+//                                           NSLog(@"Complete Download q3");
+//                                           image = [self image:image ByScalingAndCroppingForSize:CGSizeMake(MAPICONWIDTH_CONST,MAPICONHEIGHT_CONST)];
+//                                           [[SDImageCache sharedImageCache] storeImage:image forKey:@"image" toDisk:YES completion:nil];
+//
+//                                       }];
+//                
+//            }
+//            
+//            
+//        }];
+//        [q4 addOperationWithBlock:^{
+//            for (int i=q3task; i<=q4task; i++)
+//            {
+//                NSURL *url=[imageUrl objectAtIndex:i];
+//                SDWebImageDownloader *downloader=[SDWebImageDownloader sharedDownloader];
+//                
+//                [downloader downloadImageWithURL:url options:SDWebImageDownloaderContinueInBackground progress:
+//                 ^(NSInteger receivedSize, NSInteger expectedSize, NSURL * _Nullable targetURL) {
+//                     
+//                     //measure download progress of icon
+//                     NSLog(@"Total Bytes %ld Bytes Received %ld",expectedSize,receivedSize);
+//                     
+//                 }
+//                                       completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, BOOL finished) {
+//                                           NSLog(@"Complete Download q4");
+//                                           image = [self image:image ByScalingAndCroppingForSize:CGSizeMake(MAPICONWIDTH_CONST,MAPICONHEIGHT_CONST)];
+//                                           [[SDImageCache sharedImageCache] storeImage:image forKey:@"image" toDisk:YES completion:nil];
+//
+//                                       }];
+//                
+//            }
+//            
+//            
+//        }];
+//        
+        
+        
+//        __block NSData *iconData=nil;
+//        NSBlockOperation *downloadPlacesIcon=[[NSBlockOperation alloc] init];
+//        __weak NSBlockOperation *weakDownloadPlacesIcon=downloadPlacesIcon;
+//    
+//        [weakDownloadPlacesIcon addExecutionBlock:^{
+//            
+//        }];
 
         
         dispatch_async(dispatch_get_main_queue(),
         ^{
-
             for (id obj in nearPlacesArray)
             {
+            //used to create origins for distance matrix
                 [nearPlacesLatLong addObject:[NSString stringWithFormat:@"%@,%@",[[[obj objectForKey:@"geometry"] objectForKey:@"location"] objectForKey:@"lat"],[[[obj objectForKey:@"geometry"] objectForKey:@"location"] objectForKey:@"lng"]]];
                 
                 CSMarker *marker=[[CSMarker alloc] init];
@@ -404,36 +558,44 @@ didLongPressAtCoordinate:(CLLocationCoordinate2D)coordinate
                 
                 NSURL *imageUrl=[NSURL URLWithString:[NSString stringWithFormat:@"%@",[obj objectForKey:@"icon"]]];
                 SDWebImageDownloader *downloader=[SDWebImageDownloader sharedDownloader];
-                [downloader downloadImageWithURL:imageUrl options:SDWebImageDownloaderContinueInBackground progress:^(NSInteger receivedSize, NSInteger expectedSize, NSURL * _Nullable targetURL) {
+                
+                [downloader downloadImageWithURL:imageUrl options:SDWebImageDownloaderContinueInBackground progress:
+                 ^(NSInteger receivedSize, NSInteger expectedSize, NSURL * _Nullable targetURL) {
+                  
+                     //measure download progress of icon
                     NSLog(@"Total Bytes %ld Bytes Received %ld",expectedSize,receivedSize);
                     
                 }
-                    completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, BOOL finished) {
-                        NSLog(@"Complete Download");
-                        image = [self image:image ByScalingAndCroppingForSize:CGSizeMake(MAPICONWIDTH_CONST,MAPICONHEIGHT_CONST)];
-                        [marker setIcon:image];
-                        [tempMarkerset addObject:marker];
-                    }];
+                completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, BOOL finished) {
+                    NSLog(@"Complete Download");
+                    image = [self image:image ByScalingAndCroppingForSize:CGSizeMake(MAPICONWIDTH_CONST,MAPICONHEIGHT_CONST)];
+                    [marker setIcon:image];
+//                    [nearPlacesMarkers addObject:marker];
+                }];
                 double lat=[[[[obj objectForKey:@"geometry"] objectForKey:@"location"] objectForKey:@"lat"] doubleValue];
                 double longti=[[[[obj objectForKey:@"geometry"] objectForKey:@"location"] objectForKey:@"lng"] doubleValue];
                 CLLocationCoordinate2D loc=CLLocationCoordinate2DMake(lat,longti);
                 marker.position=loc;
-                [tempMarkerset addObject:marker];
+                [nearPlacesMarkers addObject:marker];
             }
-
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),^(void){
+//            self.markers=[tempMarkerset copy];
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),
+            ^(void){
                 [self distanceNearPlaces];
-        });
+            });
             
-            NSLog(@"Address array %@",[nearPlacesLatLong description]);
-            self.markers=[tempMarkerset copy];
-            NSLog(@"Marker %@",[self.markers description]);
-            [self drawMarkers];
+//            NSLog(@"Address array %@",[nearPlacesLatLong description]);
+//          
+//            NSLog(@"Marker %@",[self.markers description]);
+//            [self drawMarkers];
         });
+        [self drawMarkers];
     }];
     [fetchTask resume];
     
 }
+
+
 -(void)distanceNearPlaces
 {
 
@@ -443,12 +605,18 @@ didLongPressAtCoordinate:(CLLocationCoordinate2D)coordinate
     NSURLSessionConfiguration *config=[NSURLSessionConfiguration defaultSessionConfiguration];
     NSURLSession *session=[NSURLSession sessionWithConfiguration:config];
     NSURL *url=[NSURL URLWithString:[NSString stringWithFormat:@"%@distancematrix/json?origins=%@&destinations=%f,%f&key=%@",API_PREFIX,origin,selectedLat,selectedLongtitude,PLACESAPIKEY_CONST]];
+    originCordinatesStr=[NSString stringWithFormat:@"%f,%f",selectedLat,selectedLongtitude];
+    NSLog(@"distance matrix url %@",url);
     NSURLSessionTask *distanceFetchTask=[session dataTaskWithURL:url completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error)
     {
         NSError *err;
         distanceArray=[[NSMutableArray alloc] init];
-        distanceArray=[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&err];
-        
+//        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(distanceDataReceived) name:@"distanceArrayNotification" object:nil];
+        NSDictionary *distanceDict=[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&err];
+        distanceArray=[distanceDict objectForKey:@"rows"];
+//        [[NSNotificationCenter defaultCenter] postNotificationName:@"distanceArrayNotification" object:nil];
+        [self distanceDataReceived];
+      
     }];
 
     [distanceFetchTask resume];
@@ -456,6 +624,14 @@ didLongPressAtCoordinate:(CLLocationCoordinate2D)coordinate
 
 }
 
+-(void)distanceDataReceived
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.map clear];
+        [self drawMarkers];
+    });
+   
+}
 
 - (UIImage*)image:(UIImage *)image ByScalingAndCroppingForSize:(CGSize)targetSize
 {
@@ -638,6 +814,11 @@ didLongPressAtCoordinate:(CLLocationCoordinate2D)coordinate
  }
  
  */
+
+-(void)viewDidDisappear:(BOOL)animated
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"distanceArrayNotification" object:nil];
+}
 
 - (void)didReceiveMemoryWarning {
     

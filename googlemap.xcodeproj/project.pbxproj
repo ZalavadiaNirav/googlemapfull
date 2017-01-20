@@ -342,7 +342,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 0800;
-				ORGANIZATIONNAME = "C N Soft Net";
+				ORGANIZATIONNAME = "";
 				TargetAttributes = {
 					F1AF7CF21E1D1A30007E9A40 = {
 						CreatedOnToolsVersion = 8.0;
